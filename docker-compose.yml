@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./docker/nginx/sites-enabled/:/etc/nginx/sites-enabled/
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./www/catalog:/var/www/catalog
+    ports:
+      - "80:80"
+    links:
+      - php_8.1
+      - node
+  php_8.1:
+    build: ./docker/php_8.1
+    volumes:
+      - ./www/catalog:/var/www/catalog
+  node:
+    volumes:
+      - ./www/catalog-front:/var/www/catalog-front
+    working_dir: /var/www/catalog-front
+#    entrypoint: sh -c "npm install && npm run build && npm run start"
+    entrypoint: sh -c "npm install && npm run dev"
+    build:
+      context: ./
+      dockerfile: ./docker/node/Dockerfile
