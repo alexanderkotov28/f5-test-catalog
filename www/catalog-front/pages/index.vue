@@ -1,18 +1,24 @@
 <template>
-  <div class="row mb-2">
-    <div class="col-md-6">
-      <post></post>
-    </div>
-    <div class="col-md-6">
-      <post></post>
-    </div>
-  </div>
+  <PostGrid :posts="posts"></PostGrid>
 </template>
 
 <script>
-import Post from "../components/Post";
+import PostGrid from "../components/post-grid/grid";
+import {mapState} from "vuex";
+
 export default {
   name: 'IndexPage',
-  components: {Post}
+  fetch(){
+    this.$store.dispatch('posts/loadPosts')
+  },
+  computed: {
+    ...mapState('posts', [
+      'posts'
+    ]),
+  },
+  created() {
+    this.$store.commit('categories/setCurrentCategoryId', null);
+  },
+  components: {PostGrid}
 }
 </script>

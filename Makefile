@@ -36,6 +36,7 @@ prepare-backend: ### Preparing backend for launch
 	@docker-compose up -d --no-deps php_8.1
 	@docker-compose exec php_8.1 sh -c 'which composer && cd /var/www/catalog && composer install && chown ${UID}:${UID} vendor/ -R || exit 0'
 	@docker-compose exec php_8.1 sh -c 'cd /var/www/catalog && php artisan key:generate || exit 0'
+	@docker-compose exec php_8.1 sh -c 'chown -R www-data:www-data storage/ || exit 0'
 	@docker-compose stop php_8.1
 
 nginx-restart: ## Restart nginx
@@ -60,7 +61,22 @@ prepare-certs: ## Prepare ssl certificates
 
 uid: ## change www-data uid in all containers to current user
 	@for s in $(SERVICES); do \
-		docker-compose -f docker-compose.yml up -d --no-deps $$s; \
-		docker-compose -f docker-compose.yml exec $$s bash -c 'if [[ ${UID} -ne 0 ]]; then usermod -u ${UID} www-data; fi'; \
-		docker-compose -f docker-compose.yml stop $$s; \
+		docker-compose up -d --no-deps $$s; \
+		docker-compose exec $$s bash -c 'if [[ ${UID} -ne 0 ]]; then usermod -u ${UID} www-data; fi'; \
+		docker-compose stop $$s; \
 	done
+
+
+db-prepare: db-create db-migrate## Prepare database
+
+db-create: ##Create database
+	@docker-compose up -d --no-deps mysql
+	@docker-compose exec mysql sh -c 'mysql -uroot -proot -e "CREATE DATABASE catalog CHARACTER SET =utf8 COLLATE = utf8_general_ci" || exit 0'
+	@docker-compose stop mysql
+
+db-migrate: ## Start migrations
+	@docker-compose up -d --no-deps mysql
+	@docker-compose up -d --no-deps php_8.1
+	@docker-compose exec php_8.1 sh -c 'cd /var/www/catalog && php artisan migrate || exit 0'
+	@docker-compose stop mysql
+	@docker-compose stop php_8.1
